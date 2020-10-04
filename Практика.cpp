@@ -1,4 +1,4 @@
-﻿#include <iostream>
+#include <iostream>
 #include <cstring>
 #include <fstream>
 #include <string>
@@ -95,9 +95,6 @@ bool read_num(ifstream& in, num& n) {
                 for (int k = 0; k < 3; ++k) {
                     n.before[count_before] = before[count_three + k];
                     count_before += 1;
-                    /*if (count_before == N)
-                        break;
-                    */
                     j -= 1;
                 }
             }
@@ -110,17 +107,13 @@ bool read_num(ifstream& in, num& n) {
                         j -= 1;
                     }
                 }
-                //int k = 0;
 
                 if (count_three == -2) {
                     n.before[count_before] = before[0];
                     j -= 1;
                 }
-                //int y = count_three;
             }
-                //j += 1;
             }
-            //count_three += 1;
     }
 
     for (int l = 0; l < m; ++l)
@@ -185,7 +178,6 @@ int main()
     ifstream in("Input.txt"); // окрываем файл для чтения
     ofstream out("Output.txt"); // открываем файл на запись
     
-    //переписать для одного числа, а не всех
     if (read_num(in, n) == true) {
 
         //write_num(out, n);

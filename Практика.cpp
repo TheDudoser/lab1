@@ -1,4 +1,4 @@
-#include <iostream>
+﻿#include <iostream>
 #include <cstring>
 #include <fstream>
 #include <string>
@@ -10,7 +10,9 @@ const int N = 10;
 struct num {
     bool znak;
     int before[N];
+    int count_before;
     int after[N];
+    int count_after;
 };
 
 
@@ -20,6 +22,7 @@ bool read_num(ifstream& in, num& n) {
     int before[N];
     int k = 0;
     int i = 0;
+    int line_size;
 
     if (in.is_open())
     {
@@ -27,21 +30,54 @@ bool read_num(ifstream& in, num& n) {
         {
             if (line.size() != 0) {
 
-                if ((line[0] == '-') && ((line[1] >= 0) || (line[1] < 8)))
+                if ((line[0] == '-') && ((line[1] >= '0') || (line[1] < '8')))
                     n.znak = true;
                 else n.znak = false;
 
-                if ((((line[0] >= 0) || (line[0] < 8))) || ((line[0] == '-') && ((line[1] >= 0) || (line[1] < 8)))) {
+                //удаление ведущих нулей
+                if (((n.znak == true) && (line[1] == '0')) || ((n.znak == false) && (line[0] == '0'))) {
+                    if (n.znak == true)
+                        k += 1;
+                    while (line[k] == '0') 
+                            k += 1;
+
+                    cout << line << endl;
+                    if (line[k + 1] != '.')
+                        k -= 1;
+                    line.erase(0, k);
+                    cout << line << endl;
+                }
+
+                cout << "Нули в конце:" << endl;
+
+                //удаление нулей в конце
+                if (line[line.size() - 1] == '0') {
+                    cout << line.size() << endl;
+                    int k = line.size() - 1;
+                    while (line[k] == '0')
+                        k -= 1;
+                    cout << line << endl;
+                    if (line[k + 1] != '.')
+                        k += 1;
+                    line.erase(k+1, line.size() - 1);
+                    cout << line << endl;
+                }
+
+                int k = 0;
+                if ((((line[0] >= '0') || (line[0] < '8'))) || ((line[0] == '-') && ((line[1] >= '0') || (line[1] < '8')))) {
                     cheack = false;
                     if (n.znak == true)
                         i = 1;
                     while ((line[i] != '.') && ((i != (line.size())) && (cheack == false))) {
-                            if ((i != line.size()) && ((line[0] >= 0) || (line[0] < 8))) {
+                            if ((i != line.size()) && ((line[0] >= '0') || (line[0] < '8'))) {
                                 before[i] = (int)line[i] - 48;
                                 i += 1;
                             }
                         else if ((line[i] != '.') || (i-1)>N) cheack = true;
                     }
+                    if (n.znak != true)
+                        n.count_before = i;
+                    else n.count_before = i - 1;
                 }
                 if (i == (line.size())) { cheack = true; }
                 if ((line[i] == '.') && (cheack == false) && (i != (line.size())) && ((line[0] >= 0) || (line[0] < 8))) {
@@ -69,6 +105,7 @@ bool read_num(ifstream& in, num& n) {
             {
                 cout << "Строка пуста" << endl;
             }
+            line_size = line.size();
         }
         if (in.bad())
             cout << "Ошибка ввода-вывода при чтении\n";
@@ -77,35 +114,56 @@ bool read_num(ifstream& in, num& n) {
         else if (in.fail())
             cout << "Неверный формат данных\n";
     }
-
+    if (n.znak != true)
+        n.count_after = line_size - n.count_before - 1;
+    else n.count_after = line_size - n.count_before - 2;
     cout << boolalpha << n.znak << noboolalpha << ' ';
 
-    int m;
-    if (n.znak != true)
-        m = i - k - 1;
-    else m = i - k - 2;
+    int j = n.count_before;
+    /*if (n.znak != true)
+        j = line_size - 1;
+    else j = line_size - 2;*/
 
     int count_three = 0;
     int count_before = 0;
-    int j = m-1;
+    int E = 1;
+    int before_three = 0;
+    //n.count_before = j + 1; //количество строк до точки
     if (cheack == false) {
-        while (j >= 0) {
-            count_three = j - 2;
+        while (j > 0) {
+            count_three = j - 3;
             if (count_three >= 0) {
                 for (int k = 0; k < 3; ++k) {
-                    n.before[count_before] = before[count_three + k];
-                    count_before += 1;
+                    E = 100;
+                    for (int i = 0; i < k; i++)
+                    {
+                        E /= 10;
+                    }
+                    before_three += E * before[count_three + k];
+                    //count_before += 1;
                     j -= 1;
                 }
+                n.before[count_before] = before_three;
+                count_before += 1;
             }
             else {
                 if (count_three == -1) {
-                    count_three += 2;
-                    for (int k = 0; k <= count_three; ++k) {
-                        n.before[count_before] = before[k];
-                        count_before += 1;
+                    count_three += 1;
+                    E = 1;
+                    before_three = 0;
+                    for (int k = 0; k < 2; ++k) {
+                        E = 10;
+                        for (int i = 0; i < k; i++)
+                        {
+                            E /= 10;
+                        }
+                        before_three += E * before[count_three + k];
+                        //n.before[count_before] = before[k];
+                        //count_before += 1;
                         j -= 1;
                     }
+                    n.before[count_before] = before_three;
+                    count_before += 1;
                 }
 
                 if (count_three == -2) {
@@ -116,10 +174,10 @@ bool read_num(ifstream& in, num& n) {
             }
     }
 
-    for (int l = 0; l < m; ++l)
+    for (int l = 0; l < n.count_before; ++l)
         cout << n.before[l];
     cout << ' ';
-    for (int l = 0; l < k; ++l)
+    for (int l = 0; l < n.count_after; ++l)
         cout << n.after[l];
     cout << endl;
 
@@ -130,16 +188,18 @@ bool read_num(ifstream& in, num& n) {
 }
 
 void write_num(ofstream& out, num n) {
-    //if (n.znak == true)
-      //  out << '-';
-    /*cout << endl << (sizeof(n.before) / sizeof(n.before[0])) <<endl;
-    for (int i = 0; i < (sizeof(n.before) / sizeof(n.before[0])); ++i) {
-            cout << n.before[i];
-            cout << endl << i;
-    }
-    //out << n.before << '.' << n.after << endl; */
-    
-    //out << n << endl;
+    if (n.znak == true)
+        out << '-';
+
+    for (int i = n.count_before-1; i >= 0; --i)
+            out << n.before[i];
+
+    out << '.';
+
+    for (int i = 0; i < n.count_after; ++i)
+        out << n.after[i];
+
+    out.close();
 
 }
 
@@ -180,7 +240,7 @@ int main()
     
     if (read_num(in, n) == true) {
 
-        //write_num(out, n);
+        write_num(out, n);
 
     }
     int a;

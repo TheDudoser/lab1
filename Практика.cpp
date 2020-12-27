@@ -1,13 +1,7 @@
-﻿#include <iostream>
+#include <iostream>
 #include <cstring>
 #include <fstream>
 #include <string>
-
-#define BEFORE_SUM (a.before[i] + b.before[i])
-#define AFTER_SUM (a.after[i] + b.after[i])
-
-#define BEFORE_SUB (a.before[i] - b.before[i])
-#define AFTER_SUB (a.after[i] - b.after[i])
 
 #define OVERFLOW cout << "Переполнение"
 #define UNREAL "Переполнение! Невозможно посчитать результат операции"
@@ -17,7 +11,7 @@
 
 using namespace std;
 
-const int N = 100;
+const int N = 10;
 
 struct num {
     bool znak;
@@ -39,23 +33,11 @@ num summator(num, num);
 //-
 num sub(num, num);
 
-//равность до точки
-bool equal_before(num, num);
-
-//равность после точки
-bool equal_after(num, num);
-
 //равны/не равны
 string equal(num, num);
 
 //больше/меньше
 string more_less(num, num);
-
-//проверка на мусор
-bool is_trash(num, int, bool);
-
-//поразрядный перенос
-void shift(num*, num, num, int, bool, int*, bool);
 
 int main()
 {
@@ -69,6 +51,8 @@ int main()
     char empty;
     int count = 0;
     num c;
+    num cc;
+    num second_num;
     try {
         //РЕАЛИЗАЦИЯ
         //cout << "НАЧАЛО РАБОТЫ ПРОГРАММЫ" << '\n' << endl;
@@ -82,18 +66,19 @@ int main()
             empty = in.get();
             if (empty != '\n')
                 throw logic_error("Встречены посторонние символы в строке со знаком");
-            num second_num;
+            second_num.count_before = 0;
+            second_num.count_after = 0;
+            c.count_before = 0;
+            c.count_after = 0;
             if (read_num(in, second_num) == true)
                 write_num(out, second_num);
             else throw logic_error("Дальнейшая работа программы невозможна! Исправьте входные данные.");
 
-            //num c2;
-
             if (count > 0) {
                 if (ch == '+')
-                    c = summator(c, second_num);
+                    c = summator(cc, second_num);
                 else
-                    c = sub(c, second_num);
+                    c = sub(cc, second_num);
             }
             else {
 
@@ -101,6 +86,7 @@ int main()
                     c = summator(first_num, second_num);
                 else
                     c = sub(first_num, second_num);
+                cc = c;
             }
             //для промежуточных результатов
             write_num(out, c);
@@ -128,7 +114,7 @@ int main()
         out << endl;
         write_num(out, c); */
     }
-    catch (logic_error &exception) {
+    catch (logic_error& exception) {
         cout << exception.what() << endl;
         out << "FATAL ERROR" << endl;
     }
@@ -140,6 +126,7 @@ int main()
 
 }
 
+//Мусор
 bool is_trash(num c, int i, bool ber_afr) {
     if (ber_afr) {
         if (-abs(c.before[i]) < -800000000)
@@ -153,68 +140,90 @@ bool is_trash(num c, int i, bool ber_afr) {
         else return false;
     }
 }
-void shift(num* c, num a, num b, int i, bool bef_afr, int* flag, bool sum_sub) {
+
+//Разность чисел по 3 разряда
+void shift_sub(num* c, num a, num b, int i, bool bef_afr, int* flag) {
     //True - до запятой, False - после
-    int first, second, third;
+    int first, second;
     num cc = *c;
-    int main_check;
-    if (bef_afr)
-        main_check = cc.before[i];
-    else main_check = cc.after[i];
 
-    if ((!(is_trash(*c, i, bef_afr))) && (main_check > 7)) {
-        if (sum_sub) {
-            if (bef_afr == true) {
-                first = BEFORE_SUM % 10;
-                second = (BEFORE_SUM / 10) % 10;
-                third = (BEFORE_SUM / 100);
-            }
-            else {
-                first = AFTER_SUM % 10;
-                second = (AFTER_SUM / 10) % 10;
-                third = (AFTER_SUM / 100);
-            }
+    if (bef_afr == true) {
+        first = (((a.before[i] % 10) - (b.before[i] % 10) - *flag) % 8);
+        *flag = (((a.before[i] % 10) - (b.before[i] % 10) - *flag) / 8);
+        if (first < 0) {
+            first += 8;
+            *flag = 1;
         }
-        else {
-            if (bef_afr == true) {
-                first = abs(BEFORE_SUB % 10);
-                second = abs((BEFORE_SUB / 10) % 10);
-                third = abs((BEFORE_SUB / 100));
-            }
-            else {
-                first = abs(AFTER_SUB % 10);
-                second = abs((AFTER_SUB / 10) % 10);
-                third = abs((AFTER_SUB / 100));
-            }
+        second = (((a.before[i] / 10) % 10) - ((b.before[i] / 10) % 10) - *flag) % 8 * 10 + first;
+        *flag = (((a.before[i] / 10) % 10) - ((b.before[i] / 10) % 10) - *flag) / 8;
+        if (second < 0) {
+            second += 80;
+            *flag = 1;
         }
-
-        while ((first > 7) || (second > 7) || (third > 7)) {
-            if (first > 7) {
-                first -= 8;
-                second += 1;
-            }
-            if (second > 7) {
-                second -= 8;
-                third += 1;
-            }
-            if (third > 7) {
-                third -= 8;
-                if (((i + 1) <= N))
-                    *flag += 1;
-            }
+        cc.before[i] = ((a.before[i] / 100 - b.before[i] / 100 - *flag) % 8) * 100 + second;
+        *flag = (a.before[i] / 100 - b.before[i] / 100 - *flag) / 8;
+        if (cc.before[i] < 0) {
+            cc.before[i] += 800;
+            *flag = 1;
         }
-        if (bef_afr)
-            cc.before[i] = (third * 100) + (second * 10) + first;
-        else cc.after[i] = (third * 100) + (second * 10) + first;
-        *c = cc;
+    }
+    else {
+        first = (((a.after[i] % 10) - (b.after[i] % 10) - *flag) % 8);
+        *flag = (((a.after[i] % 10) - (b.after[i] % 10) - *flag) / 8);
+        if (first < 0) {
+            first += 8;
+            *flag = 1;
+        }
+        second = (((a.after[i] / 10) % 10) - ((b.after[i] / 10) % 10) - *flag) % 8 * 10 + first;
+        *flag = (((a.after[i] / 10) % 10) - ((b.after[i] / 10) % 10) - *flag) / 8;
+        if (second < 0) {
+            second += 80;
+            *flag = 1;
+        }
+        cc.after[i] = (a.after[i] / 100 - b.after[i] / 100 - *flag) % 8 * 100 + second;
+        *flag = (a.after[i] / 100 - b.after[i] / 100 - *flag) / 8;
+        if (cc.after[i] < 0) {
+            cc.after[i] += 800;
+            *flag = 1;
+        }
     }
 
+    *c = cc;
+    //cout << "--" << i << "-->" << cc.after[i];
 }
+
+//Сумма чисел по 3 разряда
+void shift(num* c, num a, num b, int i, bool bef_afr, int* flag) {
+    //True - до запятой, False - после
+    int first, second;
+    num cc = *c;
+
+    if (bef_afr == true) {
+        first = (((a.before[i] % 10) + (b.before[i] % 10) + *flag) % 8);
+        *flag = (((a.before[i] % 10) + (b.before[i] % 10) + *flag) / 8);
+        second = (((a.before[i] / 10) % 10) + ((b.before[i] / 10) % 10) + *flag) % 8 * 10 + first;
+        *flag = (((a.before[i] / 10) % 10) + ((b.before[i] / 10) % 10) + *flag) / 8;
+        cc.before[i] = ((a.before[i] / 100 + b.before[i] / 100 + *flag) % 8) * 100 + second;
+        *flag = (a.before[i] / 100 + b.before[i] / 100 + *flag) / 8;
+    }
+    else {
+        first = (((a.after[i] % 10) + (b.after[i] % 10) + *flag) % 8);
+        *flag = (((a.after[i] % 10) + (b.after[i] % 10) + *flag) / 8);
+        second = (((a.after[i] / 10) % 10) + ((b.after[i] / 10) % 10) + *flag) % 8 * 10 + first;
+        *flag = (((a.after[i] / 10) % 10) + ((b.after[i] / 10) % 10) + *flag) / 8;
+        cc.after[i] = (a.after[i] / 100 + b.after[i] / 100 + *flag) % 8 * 100 + second;
+        *flag = (a.after[i] / 100 + b.after[i] / 100 + *flag) / 8;
+    }
+
+    *c = cc;
+
+}
+
 bool read_num(ifstream& in, num& n) {
     string line;
     bool cheack = false;
     bool cheack_number = false;
-    int before[30];
+    int before[3 * N];
     int k = 0;
     int i = 0;
     int line_size;
@@ -258,7 +267,7 @@ bool read_num(ifstream& in, num& n) {
                 //cout << "Нули в конце:" << endl;
 
                 //удаление нулей в конце
-                if ((line[line.size() - 1] == '0') && (((line.size() - line.find('.')) % 3 == 0))){
+                if ((line[line.size() - 1] == '0') && (((line.size() - line.find('.')) % 3 == 0))) {
                     //cout << line.size() << endl;
                     int k = line.size() - 1;
                     while (line[k] == '0')
@@ -275,7 +284,7 @@ bool read_num(ifstream& in, num& n) {
                     cheack = false;
                     //cout << line.size();
                     while ((line[i] != '.') && ((i != (line.size())) && (cheack == false))) {
-                        if ((i != line.size()) && ((line[i] >= '0') && (line[i] < '8')) && ((i / 3) < N)) {
+                        if ((i != line.size()) && ((line[i] >= '0') && (line[i] < '8')) && (i < 3 * N)) {
                             before[i] = (int)line[i] - 48;
                             i += 1;
                         }
@@ -295,7 +304,7 @@ bool read_num(ifstream& in, num& n) {
                     while (i != line.size() && (cheack == false)) {
                         if (((i != line.size() + 1) && ((line[0] >= 0) || (line[0] < 8))) && (k <= N))
                         {
-                            while ((three < 3) && (i != line.size()) && (cheack != true) && ((i / 3) < N))
+                            while ((three < 3) && (i != line.size()) && (cheack != true))
                             {
                                 if ((line[i] >= '0') && (line[i] < '8')) {
                                     after += E * ((int)line[i] - 48);
@@ -303,8 +312,6 @@ bool read_num(ifstream& in, num& n) {
                                     i += 1;
                                     E /= 10;
                                     if (i == line.size()) {
-                                     //   if (three == 2)
-                                    //        after = after / 10;
                                     }
                                 }
                                 else cheack = true;
@@ -312,14 +319,17 @@ bool read_num(ifstream& in, num& n) {
                             n.after[k] = after;
                             after = 0;
                             k += 1;
+                            n.count_after = k;
                             three = 0;
                             E = 100;
-                            if (i == line.size())
-                                n.count_after = k;
                         }
                         else cheack = true;
                     }
                 }
+                if (k > N)
+                    cheack = true;
+                if (n.count_after == 0)
+                    n.count_after = k;
                 if (cheack == true) {
                     cout << "Ошибка в написании числа:" << endl;
                     cout << line << endl;
@@ -346,12 +356,7 @@ bool read_num(ifstream& in, num& n) {
             line_size = line.size();
 
         }
-
-        //if (in.eof())
-        //    cout << "Достигнут конец файла\n";
-
     }
-    //cout << boolalpha << n.znak << noboolalpha << ' ';
 
     //Разделение числа по 3 символа
     int j = n.count_before;
@@ -362,7 +367,7 @@ bool read_num(ifstream& in, num& n) {
     bool overflow = false;
     if (cheack == false) {
         while (j > 0) {
-            if (count_before > N) {
+            if (count_before < 0) {
                 overflow = true;
                 break;
             }
@@ -408,23 +413,13 @@ bool read_num(ifstream& in, num& n) {
         }
     }
 
-    //можно возвращать overflow, чтобы если ошибка в записи, дальше просто не идти
     if (overflow) {
-        //cout << "Слишком большое число!" << endl;
         throw logic_error("Слишком большое входное число!");
         return false;
     }
 
     n.count_before = count_before;
 
-    /*for (int l = 0; l < n.count_before; ++l)
-        cout << n.before[l];
-    cout << '.';
-    for (int l = 0; l < n.count_after; ++l)
-        cout << n.after[l];
-    cout << endl;*/
-
-    //in.close();
     if (cheack != true)
         return true;
     else return false;
@@ -432,6 +427,15 @@ bool read_num(ifstream& in, num& n) {
 void write_num(ofstream& out, num n) {
     if (n.znak == true)
         out << '-';
+
+    //удаление лишних нулей до точки
+    int l = n.count_before - 1;
+    if (n.before[l] == 0) {
+        while ((n.before[l] == 0) & (l != 0)) {
+            l -= 1;
+            n.count_before -= 1;
+        }
+    }
 
     for (int i = n.count_before - 1; i >= 0; --i)
     {
@@ -448,33 +452,43 @@ void write_num(ofstream& out, num n) {
 
     out << '.';
 
-    for (int i = 0; i <= n.count_after - 1; ++i) {
+    //удаление лишних нулей после точки
+    l = 0;
+    if (n.after[l] == 0) {
+        while ((n.after[l] == 0) & (l != (l + n.count_after - 1))) {
+            l += 1;
+            n.count_after -= 1;
+        }
+    }
+
+    for (int i = 0; i < n.count_after; ++i) {
         if (i == n.count_after - 1)
         {
             if ((n.after[i] % 100) == 0) {
                 out << n.after[i] / 100;
             }
             else if (((n.after[i] % 10) == 0))
-                if (n.after[i] == 10)
+                if (((n.after[i] / 10) > 0) && ((n.after[i] / 10) < 8))
                     out << '0' << n.after[i] / 10;
                 else out << n.after[i] / 10;
-            else { 
+            else {
                 if (n.after[i] < 9)
                     out << '0' << '0' << n.after[i];
-                else out << n.after[i]; }
+                else if ((n.after[i] / 100) == 0)
+                    out << '0' << n.after[i];
+                else out << n.after[i];
+            }
         }
         else {
-            if (n.after[i] < 100)
-                out << '0' << n.after[i];
-            else if (n.after[i] < 10)
+            if (n.after[i] < 10)
                 out << '0' << '0' << n.after[i];
+            else if (n.after[i] < 100)
+                out << '0' << n.after[i];
             else out << n.after[i];
         }
     }
 
     out << endl;
-    //out.close();
-
 }
 num summator(num a, num b) {
     num c, swap;
@@ -503,7 +517,7 @@ num summator(num a, num b) {
 
     //инициализация нулями в меньшем числе разрядов до точки
     if (a.count_before > b.count_before) {
-        for (int i = b.count_before; i < a.count_before; i++)
+        for (int i = b.count_before; i <= a.count_before; i++)
         {
             b.before[i] = 0;
         }
@@ -527,7 +541,7 @@ num summator(num a, num b) {
             continue;
         }
 
-        if (i > c.count_before) {
+        if ((i >= c.count_before) && (flag > 0)) {
             c.before[i] = 0 + flag;
             c.count_before += 1;
         }
@@ -536,15 +550,14 @@ num summator(num a, num b) {
                 a.before[i] = 0;
                 b.before[i] = 0;
             }
-            c.before[i] = a.before[i] + b.before[i] + flag;
+            shift(&c, a, b, i, true, &flag);
         }
-        flag = 0;
 
-        shift(&c, a, b, i, true, &flag, true);
+        shift(&c, a, b, i, true, &flag);
         if ((flag > 0) && (i > c.count_before))
             c.count_before += 1;
 
-        if ((c.count_before > N) && (flag > 0))
+        if ((c.count_before >= N) && (flag > 0))
         {
             over_flow = true;
             continue;
@@ -561,13 +574,12 @@ num summator(num a, num b) {
     }
     c.count_after = a.count_after;
     if (a.count_after > b.count_after) {
-        for (int i = b.count_after; i < a.count_after; i++)
+        for (int i = b.count_after; i <= a.count_after; i++)
         {
             b.after[i] = 0;
         }
     }
     if (over_flow == true) {
-        //OVERFLOW << " до запятой" << endl;
         throw logic_error(UNREAL);
     }
 
@@ -578,55 +590,89 @@ num summator(num a, num b) {
     i = c.count_after - 1;
 
     //суммирование разрядов после точки
-    while (!(flow) && !(over_flow) && (i < N))
+    while (!(flow) && !(over_flow) && (i >= -1))
     {
         if ((flag == 0) && (i < 0)) {
             flow = true;
             continue;
-    }
+        }
 
         if ((i < 0) && (flag > 0)) {
-            //if ((c.after[0] / 100) > 7) {
-                c.before[0] += flag;
-                int local_flag = 0;
-                num new_b;
-                for (int i = 0; i < c.count_before; i++)
-                {
-                    if (local_flag > 0)
-                        c.before[i] += local_flag;
-                    local_flag = 0;
-                    new_b.before[i] = 0;
-                    shift(&c, c, new_b, i, true, &local_flag, true);
+            c.before[0] += flag;
+            int local_flag = 0;
+            num new_b;
+            for (int i = 0; i < c.count_before; i++)
+            {
+                if (local_flag > 0)
+                    c.before[i] += local_flag;
+                local_flag = 0;
+                new_b.before[i] = 0;
+                shift(&c, c, new_b, i, true, &local_flag);
+            }
+            if (local_flag > 0) {
+                if ((c.count_before + 1) <= N) {
+                    c.before[c.count_before] = local_flag;
+                    c.count_before += 1;
                 }
-                if (local_flag > 0) {
-                    if ((c.count_before + 1) <= N) {
-                        c.before[c.count_before] = local_flag;
-                        c.count_before += 1;
-                    }
-                    else {
-                        over_flow = true;
-                        //OVERFLOW << " до запятой" << endl;
-                        //return c;
-                        throw logic_error(UNREAL);
-                    }
+                else {
+                    over_flow = true;
+                    throw logic_error(UNREAL);
                 }
-
-            //}
+            }
         }
         else
-            c.after[i] = a.after[i] + b.after[i] + flag;
-        flag = 0;
+            shift(&c, a, b, i, false, &flag);
 
-        shift(&c, a, b, i, false, &flag, true);
+        //shift(&c, a, b, i, false, &flag);
 
         --i;
     }
 
     if (over_flow == true)
-        //OVERFLOW << " после запятой" << endl;
         throw logic_error(UNREAL);
 
     return c;
+}
+void Init_before_after(bool after_before, num& a, num& b, num& c)
+{
+    if (after_before == true) {
+        //инициализация разрядов числа с наименьшим количеством разрядов
+        if (a.count_before > b.count_before) {
+            for (int i = b.count_before; i < a.count_before; i++)
+            {
+                b.before[i] = 0;
+            }
+            c.count_before = a.count_before;
+        }
+        else {
+            if (a.count_before < b.count_before) {
+                for (int i = a.count_before; i < b.count_before; i++)
+                {
+                    a.before[i] = 0;
+                }
+            }
+            c.count_before = b.count_before;
+        }
+    }
+    else {
+        //инициализация разрядов числа с наименьшим количеством разрядов
+        if (a.count_after > b.count_after) {
+            for (int i = b.count_after; i < a.count_after; i++)
+            {
+                b.after[i] = 0;
+            }
+            c.count_after = a.count_after;
+        }
+        else {
+            if (a.count_after < b.count_after) {
+                for (int i = a.count_after; i < b.count_after; i++)
+                {
+                    a.after[i] = 0;
+                }
+            }
+            c.count_after = b.count_after;
+        }
+    }
 }
 num sub(num a, num b) {
     num c;
@@ -641,115 +687,163 @@ num sub(num a, num b) {
         return c;
     }
 
-    //инициализация разрядов числа с наименьшим количеством разрядов
-    if (a.count_before > b.count_before) {
-        for (int i = b.count_before; i < a.count_before; i++)
-        {
-            b.before[i] = 0;
-        }
-        c.count_before = a.count_before;
-    }
-    else {
-        if (a.count_before < b.count_before) {
-            for (int i = a.count_before; i < b.count_before; i++)
-            {
-                a.before[i] = 0;
-            }
-        }
-        c.count_before = b.count_before;
-    }
-
+    num swap;
+    bool check = false;
     bool over_flow = false;
     bool flow = false;
     int i = 0;
     int flag = 0;
+    bool be_swap = false;
+
+    if (more_less(a, b) == A_LESS_B) {
+        swap = a;
+        a = b;
+        b = swap;
+        be_swap = true;
+    }
+
+    Init_before_after(true, a, b, c);
+
+    /*if (a.count_before < b.count_before)
+        c.count_before = a.count_before;
+    else
+        c.count_before = b.count_before; */
+
+        //c.count_after = a.count_before;
+
+    cout << a.before[0] << endl;
+
     //разность разрядов до точки
-    while (!(flow) && !(over_flow) && (i < N))
+    while (!(flow) && (i < N))
     {
+        c.before[i] = abs((a.before[i] - flag) - b.before[i]);
+        //flag = 0;
+        shift_sub(&c, a, b, i, true, &flag);
 
-        if ((i == N) && (flow > 0))
+        for (int k = i + 1; k <= c.count_before; k++)
         {
-            over_flow = true;
-            continue;
+            if ((a.before[k] > 0) && (b.before[k] > 0) && (flag > 0)) {
+                //if (i != c.count_before)
+                shift_sub(&c, a, b, k, true, &flag);
+                check = true;
+            }
         }
-        else {
-            if (!((is_trash(a, i, true)) && (is_trash(a, i, true))))
-                c.before[i] = abs(a.before[i] - b.before[i] + flag);
-            else break;
-        }
-        flag = 0;
-
-        shift(&c, a, b, i, true, &flag, false);
-
-        if ((flag == 0) && (i >= a.count_before))
+        //if (!(check))// && (i != c.count_before))
+            //shift_sub(&c, a, b, i, true, &flag);
+        check = false;
+        
+        if (i >= c.count_before)
             flow = true;
         ++i;
     }
 
-        //c.count_after = a.count_after;
-    if (a.count_after > b.count_after) {
-        for (int i = b.count_after; i < a.count_after; i++)
-        {
-            b.after[i] = 0;
-        }
-    }
-    if (over_flow == true)
-        //OVERFLOW << "до запятой!" << endl;
-        throw logic_error(UNREAL);
+    //Init_before_after(true, a, b, c);
+    /*int ccount;
+    if (a.count_before > b.count_before)
+        ccount = a.count_before;
+    else ccount = b.count_before
 
-    over_flow = false;
-    c.count_after = a.count_after;
+    for (int i = c.count_before; i < ccount; i++)
+    {
+        Init_before_after(true, a, b, c);
+        c.before[i] = a.before[i] + b.before[i];
+    } */
+
+    Init_before_after(false, a, b, c);
+
     flag = 0;
     flow = false;
     i = c.count_after - 1;
 
+    if (be_swap) {
+        a.znak = false;
+        b.znak = false;
+    }
+
+    //инициализация знака c
     if (((a.znak == false) && (b.znak == false) &&
         ((more_less(a, b)) == A_LESS_B)) || ((a.znak == true) && (b.znak == true) &&
             ((more_less(a, b)) == A_MORE_B)))
         c.znak = true;
     else c.znak = false;
-
+    num new_b;
     //разность разрядов после точки
-    while (!(flow) && !(over_flow) && (i < N))
+    while (!(flow) && (i < N))
     {
-        if ((i == N) && (flow > 0))
-        {
-            over_flow = true;
+
+        if (i >= 0)
+            shift_sub(&c, a, b, i, false, &flag);
+
+        /*if (flag > 0) {
+            for (int k = i - 1; k >= 0; --k)
+            {
+                if ((a.after[k] >= 0) && (b.after[k] >= 0) && (flag > 0)) {
+                    if (abs((a.after[k] % 10) - (b.after[k]) % 10) > 0) {
+                        c.after[i] = abs((a.after[i] + 8 * flag) - b.after[i]) + 770;
+                        a.after[k] -= 1;
+                        new_b.after[i] = 0;
+                        shift(&c, c, new_b, i, false, &flag);
+                    }
+                    else if (abs((a.after[k] / 10) - ((b.after[k] / 10) > 0))) {
+                        c.after[i] = abs((a.after[i] + (8 * flag * 10)) - b.after[i]) + 700;
+                        a.after[k] -= 10;
+                        new_b.after[i] = 0;
+                        shift(&c, c, new_b, i, false, &flag);
+                    }
+                    else if (abs(((a.after[i] / 100) - (b.after[i] / 100)) < 0)) {
+                        c.after[i] = abs((a.after[i] + 8 * 100 * flag) - b.after[i]);
+                        a.after[k] -= 100;
+                        new_b.after[i] = 0;
+                        shift(&c, c, new_b, i, false, &flag);
+                    }
+                    for (int j = k + 1; j < i; j++)
+                    {
+                        if (a.after[j] == 0)
+                            a.after[j] = 777;
+                        else if (a.after[j] > 0)
+                            a.after[j] += 770;
+                        else if ((a.after[j] / 10) > 0)
+                            a.after[j] += 700;
+                    }
+                    check = true;
+                }
+            }
+        } */
+        //if (!(check))
+        //    c.after[i] = abs(a.after[i] - b.after[i]);
+        check = false;
+        if ((flag > 0) && ((i - 1) < 0)) {
+            shift_sub(&c, a, b, 0, true, &flag);
+            //c.before[0] -= flag;
+            int local_flag = flag;
+            for (int i = 0; i < c.count_before; i++)
+            {
+                if (local_flag > 0)
+                    shift_sub(&c, a, b, i, true, &local_flag);
+                    //c.before[i] -= local_flag;
+                //local_flag = 0;
+                new_b.before[i] = 0;
+                //shift_sub(&c, c, new_b, i, true, &local_flag);
+                for (int k = i + 1; k <= a.count_before; k++)
+                {
+                    if ((a.before[i + 1] > 0) && (b.before[i + 1] > 0) && (local_flag > 0)) {
+                        shift_sub(&c, a, b, k, true, &local_flag);
+                        check = true;
+                    }
+                }
+                check = false;
+            }
+            if (local_flag > 0) {
+                if ((c.count_before + 1) <= N) {
+                    c.before[c.count_before] = local_flag;
+                    c.count_before += 1;
+                }
+            }
+            flow = true;
             continue;
         }
 
-        if (i < 0) {
-            if (abs((c.after[0] / 100)) > 7) {
-                c.before[0] -= flag;
-                int local_flag = 0;
-                num new_b;
-                for (int i = 0; i < c.count_before; i++)
-                {
-                    if (local_flag > 0)
-                        c.before[i] -= local_flag;
-                    local_flag = 0;
-                    new_b.before[i] = 0;
-                    shift(&c, c, new_b, i, true, &local_flag, true);
-                }
-                if (local_flag > 0) {
-                    if ((c.count_before + 1) <= N) {
-                        c.before[c.count_before] = local_flag;
-                        c.count_before += 1;
-                    }
-                    else {
-                        over_flow = true;
-                        //OVERFLOW << " до запятой" << endl;
-                        throw logic_error(UNREAL);
-                        //return c;
-                    }
-                }
-
-            }
-        }
-        else
-            c.after[i] = abs(a.after[i] - b.after[i] + flag);
-        flag = 0;
-        shift(&c, a, b, i, false, &flag, false);
+        //flag = 0;
 
         if ((flag == 0) && (i < 0))
             flow = true;
@@ -766,7 +860,7 @@ bool equal_before(num a, num b) {
     bool EqualBefore = false;
     for (int i = a.count_before - 1; i >= 0; --i)
     {
-        if ((a.before[i] == b.before[i]))
+        if (a.before[i] == b.before[i])
             EqualBefore = true;
         else
             return false;
@@ -777,7 +871,7 @@ bool equal_after(num a, num b) {
     bool EqualAfter = false;
     for (int i = 0; i < a.count_after; ++i)
     {
-        if ((a.after[i] == b.after[i]))
+        if (a.after[i] == b.after[i])
             EqualAfter = true;
         else
             return false;
